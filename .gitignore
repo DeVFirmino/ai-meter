@@ -1,7 +1,13 @@
 bin/
 obj/
 /packages/
+CONTEXT.md
 riderModule.iml
 /_ReSharper.Caches/
 .idea/
+.agents/
+.codex/
 .claude/handoff.md
+AGENTS.md
+CLAUDE.md
+docs/implementation-log.md

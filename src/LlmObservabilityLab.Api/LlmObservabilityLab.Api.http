@@ -4,7 +4,6 @@ POST {{LlmObservabilityLab_Api_HostAddress}}/api/chat
 Content-Type: application/json
 
 {
-  "intent": "explain",
-  "message": "Why does output length affect LLM latency?"
+  "prompt": "Why does output length affect LLM latency?"
 }
 ###
