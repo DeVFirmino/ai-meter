@@ -11,15 +11,17 @@
 
 ## 0. Estado atual do repositório (2026-09-04)
 
-Scaffold do Rider (`Microsoft.NET.Sdk.Web`, net10.0), ainda intocado:
+Scaffold-base concluído em .NET 10:
 
-- Projeto **na raiz**, não em `src/LlmObservabilityLab.Api/`
-- `Program.cs` com o template **Minimal API** `weatherforecast` — remover
-- `RootNamespace` = `llm_observability_azure` (derivado do nome kebab-case) — trocar por `LlmObservabilityLab.Api`
-- Único pacote: `Microsoft.AspNetCore.OpenApi` 10.0.10
+- API em `src/LlmObservabilityLab.Api/`, configurada com `AddControllers()` + `MapControllers()`
+- template Minimal API `weatherforecast` removido
+- projetos `LlmObservabilityLab.UseCases.Tests` e `LlmObservabilityLab.Traffic` registrados na solução
+- SDK fixado, versões NuGet centralizadas e warnings tratados como erros
+- guardrails locais e de CI instalados; `scripts/verify.sh` concentra os gates do repositório
+- `Microsoft.AspNetCore.OpenApi` removido porque o scaffold original resolvia uma dependência transitiva
+  com vulnerabilidade de severidade alta
 
-Primeiros passos: apagar o `weatherforecast`, `AddControllers()` + `MapControllers()`, mover o projeto
-para `src/`, corrigir o namespace, e só então a fase 0 da infra.
+Próximo passo: fase 0 da infraestrutura, mantendo a aplicação sem credenciais no repositório.
 
 ---
 

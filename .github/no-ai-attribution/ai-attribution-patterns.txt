@@ -1,0 +1,37 @@
+# Patterns that mark a line as AI attribution.
+#
+# One POSIX ERE per line. Blank lines and lines starting with "#" are ignored.
+# Matching is done against the LOWERCASED line, so write every pattern in
+# lowercase. POSIX awk has no \b, so word boundaries are written explicitly as
+# (^|[^a-z]) ... ([^a-z]|$).
+#
+# Adding a pattern here is the only supported way to extend the guard rail.
+# Do not edit no-ai-attribution.sh to add a rule.
+
+# --- Git trailers -----------------------------------------------------------
+^[[:space:]]*(co-authored-by|coauthored-by|co-committed-by|co-developed-by|assisted-by|generated-by|created-by|helped-by|reviewed-by|signed-off-by)[[:space:]]*:.*(claude|codex|chat[[:space:]]?gpt|gpt(-[0-9]+)?|open[[:space:]]?ai|anthropic|copilot|cursor|gemini|devin|aider|windsurf|codeium|tabnine|sourcegraph|\[bot\]|ai assistant|ai agent)
+^[[:space:]]*co[- ]?authored[ -]by[[:space:]]+(an?[[:space:]]+)?(claude|codex|chat[[:space:]]?gpt|gpt(-[0-9]+)?|open[[:space:]]?ai|anthropic|copilot|cursor|gemini|devin|aider|windsurf|codeium|tabnine|sourcegraph|an?[[:space:]]+ai)([^a-z]|$)
+
+# --- Vendor e-mail addresses ------------------------------------------------
+@(anthropic|openai)\.(com|ai)
+<[^>]*(claude|codex|copilot|cursor|chatgpt)[^>]*@
+
+# --- "Generated with X" / "written by X" ------------------------------------
+(generated|created|authored|written|produced|drafted|made|built|coded|implemented)[[:space:]]+(with|by|using)[[:space:]]+\[?(an?[[:space:]]+)?(claude|codex|chatgpt|open[[:space:]]?ai|anthropic|copilot|cursor|gemini|devin|aider|windsurf|codeium|llm|ai)([^a-z]|$)
+(^|[^a-z])claude[[:space:]]+code([^a-z]|$)
+(^|[^a-z])(claude|codex|copilot|cursor|chatgpt|gemini)[[:space:]]+(wrote|generated|authored|assisted|helped)([^a-z]|$)
+(^|[^a-z])ai[- ]generated([^a-z]|$)
+(^|[^a-z])ai[- ]assisted([^a-z]|$)
+(^|[^a-z])(with|via|using)[[:space:]]+(the[[:space:]]+)?help[[:space:]]+of[[:space:]]+(claude|codex|chatgpt|copilot|cursor|gemini|an?[[:space:]]+ai)([^a-z]|$)
+
+# --- Vendor URLs ------------------------------------------------------------
+claude\.ai/code
+claude\.com/claude-code
+anthropic\.com/claude
+openai\.com/codex
+github\.com/features/copilot
+
+# --- The robot emoji --------------------------------------------------------
+# Every mainstream agent stamps this on the attribution line. In a portfolio
+# repository a robot emoji in a commit message is attribution by definition.
+🤖
