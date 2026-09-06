@@ -45,4 +45,15 @@ public sealed class TestChatClientBuilder
                 It.IsAny<CancellationToken>()),
             Times.Never);
     }
+
+    public void VerifyReceivedTeam(string teamId)
+    {
+        _chatClient.Verify(client => client.GetResponseAsync(
+            It.IsAny<IEnumerable<ChatMessage>>(),
+            It.Is<ChatOptions?>(options =>
+                options != null && options.AdditionalProperties != null &&
+                (string)options.AdditionalProperties["team.id"]! == teamId),
+            It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
 }

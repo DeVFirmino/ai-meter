@@ -1,6 +1,7 @@
 using Azure.AI.OpenAI;
 using Azure.Identity;
 using LlmObservabilityLab.Api.Filters;
+using LlmObservabilityLab.Api.Teams;
 using LlmObservabilityLab.Api.Telemetry;
 using LlmObservabilityLab.Api.UseCases.Chat;
 using Microsoft.Extensions.AI;
@@ -16,14 +17,21 @@ string azureOpenAiDeploymentName = builder.Configuration["AzureOpenAI:Deployment
 builder.Services.AddControllers(options => options.Filters.Add<ExceptionFilter>());
 builder.Services.AddOpenApi();
 builder.Services.AddScoped<IAskChatUseCase, AskChatUseCase>();
+builder.Services.AddScoped<TeamContext>();
+builder.Services.AddScoped<TeamContextMiddleware>();
 builder.Services.AddTelemetry(builder.Environment.ApplicationName);
 
 bool captureSensitiveData = builder.Environment.IsDevelopment();
+DefaultAzureCredentialOptions credentialOptions = new()
+{
+    ExcludeManagedIdentityCredential = builder.Environment.IsDevelopment()
+};
+
 builder.Services
     .AddChatClient(_ =>
         new AzureOpenAIClient(
                 new Uri(azureOpenAiEndpoint),
-                new DefaultAzureCredential())
+                new DefaultAzureCredential(credentialOptions))
             .GetChatClient(azureOpenAiDeploymentName)
             .AsIChatClient())
     .UseOpenTelemetry(configure: client => client.EnableSensitiveData = captureSensitiveData);
@@ -37,6 +45,8 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseRouting();
+app.UseMiddleware<TeamContextMiddleware>();
 app.MapControllers();
 
 app.Run();
