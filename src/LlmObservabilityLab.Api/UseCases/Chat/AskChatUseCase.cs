@@ -1,6 +1,7 @@
 using FluentValidation.Results;
 using LlmObservabilityLab.Api.Errors;
 using Microsoft.Extensions.AI;
+using LlmObservabilityLab.Api.Teams;
 
 namespace LlmObservabilityLab.Api.UseCases.Chat;
 
@@ -15,12 +16,22 @@ public sealed class AskChatUseCase : IAskChatUseCase
 
     public async Task<AskChatResponse> Ask(
         AskChatRequest request,
+        string teamId,
         CancellationToken cancellationToken)
     {
         Validate(request);
 
+        ChatOptions options = new()
+        {
+            AdditionalProperties = new AdditionalPropertiesDictionary
+            {
+                [TeamContext.PropertyName] = teamId,
+            },
+        };
+
         ChatResponse chatResponse = await _chatClient.GetResponseAsync(
             request.Prompt,
+            options,
             cancellationToken: cancellationToken);
 
         return new AskChatResponse

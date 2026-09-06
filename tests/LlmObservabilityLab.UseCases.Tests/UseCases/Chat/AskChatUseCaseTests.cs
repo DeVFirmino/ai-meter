@@ -9,8 +9,10 @@ namespace LlmObservabilityLab.UseCases.Tests.UseCases.Chat;
 
 public sealed class AskChatUseCaseTests
 {
-    [Fact]
-    public async Task ShouldReturnAssistantTextWhenPromptIsValid()
+    [Theory]
+    [InlineData("engineering")]
+    [InlineData("support")]
+    public async Task ShouldReturnAssistantTextWhenPromptIsValid(string teamId)
     {
         const string prompt = "Why does LLM observability matter?";
         const string assistantText = "It reveals what an HTTP 200 hides.";
@@ -25,10 +27,11 @@ public sealed class AskChatUseCaseTests
             Prompt = prompt,
         };
 
-        AskChatResponse response = await useCase.Ask(request, cancellationToken);
+        AskChatResponse response = await useCase.Ask(request, teamId, cancellationToken);
 
         response.Text.Should().Be(assistantText);
         chatClientBuilder.VerifyReceivedPrompt(prompt, cancellationToken);
+        chatClientBuilder.VerifyReceivedTeam(teamId);
     }
 
     [Fact]
@@ -42,7 +45,7 @@ public sealed class AskChatUseCaseTests
             Prompt = string.Empty,
         };
 
-        Func<Task> act = () => useCase.Ask(request, CancellationToken.None);
+        Func<Task> act = () => useCase.Ask(request, "engineering", CancellationToken.None);
 
         ValidationFailedException exception = (await act.Should()
             .ThrowAsync<ValidationFailedException>()).Which;

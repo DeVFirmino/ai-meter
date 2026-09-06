@@ -1,5 +1,6 @@
 using LlmObservabilityLab.Api.Errors;
 using LlmObservabilityLab.Api.UseCases.Chat;
+using LlmObservabilityLab.Api.Teams;
 using Microsoft.AspNetCore.Mvc;
 
 namespace LlmObservabilityLab.Api.Controllers;
@@ -13,11 +14,13 @@ public sealed class ChatController : ControllerBase
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Ask(
         [FromServices] IAskChatUseCase useCase,
+        [FromServices] TeamContext teamContext,
         [FromBody] AskChatRequest request,
         CancellationToken cancellationToken)
     {
-        AskChatResponse response = await useCase.Ask(request, cancellationToken);
+        AskChatResponse response = await useCase.Ask(request, teamContext.TeamId, cancellationToken);
 
-        return Ok(response);
+        return Ok(response);    
+        
     }
 }
