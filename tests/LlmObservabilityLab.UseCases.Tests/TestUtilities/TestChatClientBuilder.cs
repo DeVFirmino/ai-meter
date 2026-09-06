@@ -35,4 +35,14 @@ public sealed class TestChatClientBuilder
             expectedCancellationToken),
             Times.Once);
     }
+
+    public void VerifyNotCalled()
+    {
+        _chatClient.Verify(
+            client => client.GetResponseAsync(
+                It.IsAny<IEnumerable<ChatMessage>>(),
+                It.IsAny<ChatOptions?>(),
+                It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
 }
