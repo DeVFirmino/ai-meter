@@ -7,10 +7,22 @@ public sealed class TestChatClientBuilder
 {
     private readonly Mock<IChatClient> _chatClient = new();
 
-    public TestChatClientBuilder WithResponse(string responseText)
+    public TestChatClientBuilder WithResponse(
+        string responseText,
+        long inputTokens = 0,
+        long outputTokens = 0,
+        string? modelId = null)
     {
         var response = new ChatResponse(
-            new ChatMessage(ChatRole.Assistant, responseText));
+            new ChatMessage(ChatRole.Assistant, responseText))
+        {
+            ModelId = modelId,
+            Usage = new UsageDetails
+            {
+                InputTokenCount = inputTokens,
+                OutputTokenCount = outputTokens,
+            },
+        };
 
         _chatClient
             .Setup(client => client.GetResponseAsync(

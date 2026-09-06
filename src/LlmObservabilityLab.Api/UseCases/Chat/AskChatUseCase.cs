@@ -2,16 +2,19 @@ using FluentValidation.Results;
 using LlmObservabilityLab.Api.Errors;
 using Microsoft.Extensions.AI;
 using LlmObservabilityLab.Api.Teams;
+using LlmObservabilityLab.Api.Telemetry;
 
 namespace LlmObservabilityLab.Api.UseCases.Chat;
 
 public sealed class AskChatUseCase : IAskChatUseCase
 {
     private readonly IChatClient _chatClient;
+    private readonly AiUsageMeter _usageMeter;
 
-    public AskChatUseCase(IChatClient chatClient)
+    public AskChatUseCase(IChatClient chatClient, AiUsageMeter usageMeter)
     {
         _chatClient = chatClient;
+        _usageMeter = usageMeter;
     }
 
     public async Task<AskChatResponse> Ask(
@@ -33,6 +36,12 @@ public sealed class AskChatUseCase : IAskChatUseCase
             request.Prompt,
             options,
             cancellationToken: cancellationToken);
+
+        _usageMeter.RecordTokens(
+            teamId,
+            chatResponse.ModelId,
+            chatResponse.Usage?.InputTokenCount ?? 0,
+            chatResponse.Usage?.OutputTokenCount ?? 0);
 
         return new AskChatResponse
         {

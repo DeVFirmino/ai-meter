@@ -22,7 +22,8 @@ public static class TelemetryRegistration
             .WithMetrics(metrics => metrics
                 .AddAspNetCoreInstrumentation()
                 .AddHttpClientInstrumentation()
-                .AddMeter(ChatClientTelemetrySourceName))
+                .AddMeter(ChatClientTelemetrySourceName)
+                .AddMeter(AiUsageMeter.MeterName))
             .WithLogging(
                 configureBuilder: null,
                 configureOptions: options =>

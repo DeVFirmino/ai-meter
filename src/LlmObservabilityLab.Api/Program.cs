@@ -19,6 +19,7 @@ builder.Services.AddOpenApi();
 builder.Services.AddScoped<IAskChatUseCase, AskChatUseCase>();
 builder.Services.AddScoped<TeamContext>();
 builder.Services.AddScoped<TeamContextMiddleware>();
+builder.Services.AddSingleton<AiUsageMeter>();
 builder.Services.AddTelemetry(builder.Environment.ApplicationName);
 
 bool captureSensitiveData = builder.Environment.IsDevelopment();

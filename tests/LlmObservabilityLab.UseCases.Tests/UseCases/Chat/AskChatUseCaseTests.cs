@@ -4,6 +4,7 @@ using LlmObservabilityLab.Api.Errors;
 using LlmObservabilityLab.Api.UseCases.Chat;
 using LlmObservabilityLab.UseCases.Tests.TestUtilities;
 using Microsoft.Extensions.AI;
+using Microsoft.Extensions.Diagnostics.Metrics.Testing;
 
 namespace LlmObservabilityLab.UseCases.Tests.UseCases.Chat;
 
@@ -21,7 +22,8 @@ public sealed class AskChatUseCaseTests
         TestChatClientBuilder chatClientBuilder = new TestChatClientBuilder()
             .WithResponse(assistantText);
         using IChatClient chatClient = chatClientBuilder.Build();
-        var useCase = new AskChatUseCase(chatClient);
+        using TokenMetricProbe probe = new();
+        var useCase = new AskChatUseCase(chatClient, probe.Meter);
         var request = new AskChatRequest
         {
             Prompt = prompt,
@@ -39,7 +41,8 @@ public sealed class AskChatUseCaseTests
     {
         TestChatClientBuilder chatClientBuilder = new TestChatClientBuilder();
         using IChatClient chatClient = chatClientBuilder.Build();
-        var useCase = new AskChatUseCase(chatClient);
+        using TokenMetricProbe probe = new();
+        var useCase = new AskChatUseCase(chatClient, probe.Meter);
         var request = new AskChatRequest
         {
             Prompt = string.Empty,
@@ -52,5 +55,34 @@ public sealed class AskChatUseCaseTests
         exception.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         exception.Errors.Should().Equal(ErrorMessages.PromptRequired);
         chatClientBuilder.VerifyNotCalled();
+        probe.Collector.GetMeasurementSnapshot().Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task ShouldRecordInputAndOutputTokensTaggedWithTeamAndModel()
+    {
+        TestChatClientBuilder chatClientBuilder = new TestChatClientBuilder()
+            .WithResponse("ok", inputTokens: 12, outputTokens: 40, modelId: "gpt-4.1-mini");
+        using IChatClient chatClient = chatClientBuilder.Build();
+        using TokenMetricProbe probe = new();
+        var useCase = new AskChatUseCase(chatClient, probe.Meter);
+        var request = new AskChatRequest
+        {
+            Prompt = "Explain observability.",
+        };
+
+        await useCase.Ask(request, "support", CancellationToken.None);
+
+        IReadOnlyList<CollectedMeasurement<long>> measurements = probe.Collector.GetMeasurementSnapshot();
+        measurements.Should().HaveCount(2);
+        CollectedMeasurement<long> input = measurements.Single(m => (string?)m.Tags["token.type"] == "input");
+        CollectedMeasurement<long> output = measurements.Single(m => (string?)m.Tags["token.type"] == "output");
+        input.Value.Should().Be(12);
+        output.Value.Should().Be(40);
+        foreach (CollectedMeasurement<long> measurement in measurements)
+        {
+            measurement.Tags["team.id"].Should().Be("support");
+            measurement.Tags["gen_ai.request.model"].Should().Be("gpt-4.1-mini");
+        }
     }
 }
