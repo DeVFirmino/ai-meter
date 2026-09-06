@@ -1,6 +1,7 @@
 using Azure.AI.OpenAI;
 using Azure.Identity;
 using LlmObservabilityLab.Api.Filters;
+using LlmObservabilityLab.Api.Telemetry;
 using LlmObservabilityLab.Api.UseCases.Chat;
 using Microsoft.Extensions.AI;
 using Scalar.AspNetCore;
@@ -15,6 +16,7 @@ string azureOpenAiDeploymentName = builder.Configuration["AzureOpenAI:Deployment
 builder.Services.AddControllers(options => options.Filters.Add<ExceptionFilter>());
 builder.Services.AddOpenApi();
 builder.Services.AddScoped<IAskChatUseCase, AskChatUseCase>();
+builder.Services.AddTelemetry(builder.Environment.ApplicationName);
 
 bool captureSensitiveData = builder.Environment.IsDevelopment();
 builder.Services
