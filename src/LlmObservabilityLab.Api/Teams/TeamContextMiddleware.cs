@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using LlmObservabilityLab.Api.Errors;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Mvc.Controllers;
 using Microsoft.Extensions.Primitives;
 
@@ -34,6 +35,8 @@ public sealed class TeamContextMiddleware : IMiddleware
 
         _teamContext.TeamId = teamId;
         Activity.Current?.SetTag(TeamContext.PropertyName, teamId);
+        context.Features.Get<IHttpMetricsTagsFeature>()?.Tags.Add(
+            new KeyValuePair<string, object?>(TeamContext.PropertyName, teamId));
 
         using IDisposable? scope = _logger.BeginScope(new Dictionary<string, object>
         {
