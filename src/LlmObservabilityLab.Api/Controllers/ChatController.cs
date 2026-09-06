@@ -1,3 +1,4 @@
+using LlmObservabilityLab.Api.Errors;
 using LlmObservabilityLab.Api.UseCases.Chat;
 using Microsoft.AspNetCore.Mvc;
 
@@ -9,6 +10,7 @@ public sealed class ChatController : ControllerBase
 {
     [HttpPost]
     [ProducesResponseType(typeof(AskChatResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Ask(
         [FromServices] IAskChatUseCase useCase,
         [FromBody] AskChatRequest request,
