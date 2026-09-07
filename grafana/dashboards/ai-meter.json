@@ -35,7 +35,9 @@
         {
           "refId": "A",
           "expr": "sum by (team_id) (last_over_time(ai_meter_tokens_total{token_type=\"input\"}[$__range])) * 0.40 / 1e6 + sum by (team_id) (last_over_time(ai_meter_tokens_total{token_type=\"output\"}[$__range])) * 1.60 / 1e6",
-          "legendFormat": "{{team_id}}"
+          "legendFormat": "{{team_id}}",
+          "instant": true,
+          "range": false
         }
       ],
       "fieldConfig": {
@@ -77,7 +79,9 @@
         {
           "refId": "A",
           "expr": "sum by (team_id) (last_over_time(ai_meter_tokens_total[$__range]))",
-          "legendFormat": "{{team_id}}"
+          "legendFormat": "{{team_id}}",
+          "instant": true,
+          "range": false
         }
       ],
       "fieldConfig": {
@@ -119,7 +123,9 @@
         {
           "refId": "A",
           "expr": "sum by (team_id) (last_over_time(http_server_request_duration_seconds_count{http_route=\"api/chat\", team_id!=\"\", http_response_status_code=~\"4..|5..\"}[$__range]))",
-          "legendFormat": "{{team_id}}"
+          "legendFormat": "{{team_id}}",
+          "instant": true,
+          "range": false
         }
       ],
       "fieldConfig": {
@@ -293,7 +299,9 @@
         {
           "refId": "A",
           "expr": "sum by (team_id) (last_over_time(http_server_request_duration_seconds_count{http_route=\"api/chat\", team_id!=\"\", http_response_status_code=\"429\"}[$__range]))",
-          "legendFormat": "{{team_id}}"
+          "legendFormat": "{{team_id}}",
+          "instant": true,
+          "range": false
         }
       ],
       "fieldConfig": {
