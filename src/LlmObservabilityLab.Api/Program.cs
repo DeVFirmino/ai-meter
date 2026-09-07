@@ -1,6 +1,6 @@
 using Azure.AI.OpenAI;
 using Azure.Identity;
-using LlmObservabilityLab.Api.Chat;
+using LlmObservabilityLab.Api.ChatClients;
 using LlmObservabilityLab.Api.Filters;
 using LlmObservabilityLab.Api.Teams;
 using LlmObservabilityLab.Api.Telemetry;
