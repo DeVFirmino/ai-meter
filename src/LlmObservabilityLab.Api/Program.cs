@@ -21,6 +21,7 @@ builder.Services.AddScoped<IAskChatUseCase, AskChatUseCase>();
 builder.Services.AddScoped<TeamContext>();
 builder.Services.AddScoped<TeamContextMiddleware>();
 builder.Services.AddSingleton<AiUsageMeter>();
+builder.Services.AddTeamRateLimiting(builder.Configuration);
 builder.Services.AddTelemetry(builder.Environment.ApplicationName);
 
 bool captureSensitiveData = builder.Environment.IsDevelopment();
@@ -53,6 +54,7 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 app.UseRouting();
 app.UseMiddleware<TeamContextMiddleware>();
+app.UseRateLimiter();
 app.MapControllers();
 
 app.Run();

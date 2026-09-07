@@ -14,7 +14,7 @@
     "to": "now"
   },
   "refresh": "30s",
-  "description": "AI usage and estimated cost per team, accumulated since the API started (last_over_time; counters reset when the API restarts). Reference prices for gpt-4.1-mini (Azure OpenAI, Sep 2026): input 0.40 USD and output 1.60 USD per million tokens. An estimate, not the Azure invoice.",
+  "description": "AI usage and estimated cost per team, accumulated since the API started (last_over_time; counters reset when the API restarts). Reference prices for gpt-4.1-mini (Azure OpenAI, Sep 2026): input 0.40 USD and output 1.60 USD per million tokens. An estimate, not the Azure invoice. Each team has a requests-per-minute quota (Teams:RequestsPerMinute); calls over it get HTTP 429.",
   "panels": [
     {
       "id": 1,
@@ -104,11 +104,11 @@
     {
       "id": 3,
       "type": "stat",
-      "title": "Failed calls per team (4xx/5xx, since API start)",
+      "title": "Rejected calls per team (4xx/5xx, since API start)",
       "gridPos": {
         "x": 16,
         "y": 0,
-        "w": 8,
+        "w": 4,
         "h": 6
       },
       "datasource": {
@@ -273,6 +273,59 @@
         "overrides": []
       },
       "options": {}
+    },
+    {
+      "id": 7,
+      "type": "stat",
+      "title": "Rate-limited per team (429, since API start)",
+      "description": "Calls rejected because the team used its requests-per-minute quota.",
+      "gridPos": {
+        "x": 20,
+        "y": 0,
+        "w": 4,
+        "h": 6
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (team_id) (last_over_time(http_server_request_duration_seconds_count{http_route=\"api/chat\", http_response_status_code=\"429\"}[$__range]))",
+          "legendFormat": "{{team_id}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "textMode": "value_and_name",
+        "colorMode": "value",
+        "graphMode": "none"
+      }
     }
   ]
 }
