@@ -149,11 +149,6 @@ AzureOpenAI__Endpoint='https://<resource>.openai.azure.com/' AzureOpenAI__Deploy
 - Errors go through an MVC exception filter. `IExceptionHandler` with ProblemDetails is the current ASP.NET Core recommendation.
 - The backend is a local container. Azure Monitor is the next stop for the same signals.
 
-## Tasks
-
-- [ ] Refactor this README into a clear lab walkthrough with runnable commands and expected results.
-- [ ] Add more screenshots of Grafana and the two-team quota demo, with captions identifying simulated data.
-
 ## Troubleshooting
 
 After the Mac sleeps, the Docker VM's clock lags and Prometheus stamps samples hours in the past, so the dashboard looks empty. Widen the time range to find them, and check `docker exec lgtm date` before a demo.
