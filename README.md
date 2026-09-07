@@ -1,8 +1,14 @@
 # AI Meter
 
-Put a language model behind an API and, within a week, someone will ask which team is spending the money. This lab shows one way to answer that with ASP.NET Core, OpenTelemetry and Grafana: usage and estimated cost per team and per model, plus a quota that stops one team from using everyone's budget.
+AI Meter is an ASP.NET Core lab for tracking LLM token usage and estimated cost per team with OpenTelemetry and Grafana. Tokens are grouped by model, the cost estimate uses the reference prices for gpt-4.1-mini, and each team has its own request rate limit.
 
 Use it as a template. Each piece is small, and the steps below follow the order you would add them to your own API.
+
+Read the accompanying blog post: [AI Meter: run a lab for LLM usage, estimated cost and team limits](https://danieldias.dev/en/blog/ai-meter-usage-and-cost-per-team).
+
+![Grafana showing simulated token usage and estimated cost for engineering and support, with three engineering calls blocked by the request limit](docs/img/ai-meter-grafana-demo.png)
+
+The screenshot uses the fake model: token counts are invented and the displayed cost represents no actual spending.
 
 ## What you get
 
@@ -114,7 +120,7 @@ curl -s -X POST http://localhost:5286/api/chat \
   -d '{"prompt":"What is a token?"}'
 ```
 
-To see the quota, send more calls than the limit allows inside one minute and count the status codes:
+To see the quota, stop the API and restart it with the same command to clear the allowance used above. Without sending any other requests first, send more calls than the limit allows inside one minute and count the status codes:
 
 ```bash
 for i in $(seq 1 150); do
@@ -138,9 +144,15 @@ AzureOpenAI__Endpoint='https://<resource>.openai.azure.com/' AzureOpenAI__Deploy
 
 - The team is a header. Production needs it from authentication.
 - The quota counts requests. Azure bills tokens, and a request limiter decides before the model reports usage, so a token budget needs a limiter of its own.
+- The quota is held in memory per API instance. Restarting clears it, and multiple instances each have their own allowance.
 - Prices live in the dashboard JSON. Configuration with a date is easier to audit.
 - Errors go through an MVC exception filter. `IExceptionHandler` with ProblemDetails is the current ASP.NET Core recommendation.
 - The backend is a local container. Azure Monitor is the next stop for the same signals.
+
+## Tasks
+
+- [ ] Refactor this README into a clear lab walkthrough with runnable commands and expected results.
+- [ ] Add more screenshots of Grafana and the two-team quota demo, with captions identifying simulated data.
 
 ## Troubleshooting
 
