@@ -7,7 +7,7 @@ riderModule.iml
 .idea/
 .agents/
 .codex/
-.claude/handoff.md
+.claude/
 AGENTS.md
 CLAUDE.md
 docs/implementation-log.md
