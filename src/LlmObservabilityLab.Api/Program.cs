@@ -1,5 +1,6 @@
 using Azure.AI.OpenAI;
 using Azure.Identity;
+using LlmObservabilityLab.Api.Chat;
 using LlmObservabilityLab.Api.Filters;
 using LlmObservabilityLab.Api.Teams;
 using LlmObservabilityLab.Api.Telemetry;
@@ -28,9 +29,13 @@ DefaultAzureCredentialOptions credentialOptions = new()
     ExcludeManagedIdentityCredential = builder.Environment.IsDevelopment()
 };
 
+bool useFakeChatClient = builder.Environment.IsDevelopment()
+    && builder.Configuration.GetValue<bool>("AzureOpenAI:UseFakeClient");
+
 builder.Services
-    .AddChatClient(_ =>
-        new AzureOpenAIClient(
+    .AddChatClient(_ => useFakeChatClient
+        ? new FakeChatClient()
+        : new AzureOpenAIClient(
                 new Uri(azureOpenAiEndpoint),
                 new DefaultAzureCredential(credentialOptions))
             .GetChatClient(azureOpenAiDeploymentName)
