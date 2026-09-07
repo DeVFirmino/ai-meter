@@ -21,13 +21,13 @@ public sealed class TeamContextMiddleware : IMiddleware
 
     public async Task InvokeAsync(HttpContext context, RequestDelegate next)
     {
-        if (!TargetsController(context))
+        if (TargetsController(context) is false)
         {
             await next(context);
             return;
         }
 
-        if (!TryReadTeam(context.Request, out string teamId))
+        if (TryReadTeam(context.Request, out string teamId) is false)
         {
             await RejectAsync(context);
             return;

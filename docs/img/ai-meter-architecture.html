@@ -1,0 +1,56 @@
+<!DOCTYPE html><html><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Karla:wght@400;600&family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/roughjs@4.6.6/bundled/rough.js"></script>
+<style>body{margin:0;background:#FBF4E6} svg{display:block}</style></head><body>
+<svg id="s" xmlns="http://www.w3.org/2000/svg" width="1200" height="900" viewBox="0 0 1200 900"><rect width="100%" height="100%" fill="#FBF4E6"/></svg>
+<script>
+const svg=document.getElementById('s'); const rc=rough.svg(svg);
+const rr=(x,y,w,h,r)=>`M${x+r},${y} h${w-2*r} a${r},${r} 0 0 1 ${r},${r} v${h-2*r} a${r},${r} 0 0 1 -${r},${r} h-${w-2*r} a${r},${r} 0 0 1 -${r},-${r} v-${h-2*r} a${r},${r} 0 0 1 ${r},-${r} z`;
+function rect(x,y,w,h,fill,stroke,op){const g=rc.path(rr(x,y,w,h,12),{fill,stroke,strokeWidth:2,fillStyle:'solid',roughness:1.2,bowing:1,seed:Math.floor(x*7+y*13)});g.setAttribute('opacity',op);svg.appendChild(g);}
+function arrow(pts,stroke){svg.appendChild(rc.linearPath(pts,{stroke,strokeWidth:2,roughness:1,seed:Math.floor(pts[0][0]*3+pts[0][1])}));
+ const [a,b]=[pts[pts.length-2],pts[pts.length-1]];const ang=Math.atan2(b[1]-a[1],b[0]-a[0]);const L=12,W=6;
+ const p1=[b[0]-L*Math.cos(ang)+W*Math.sin(ang),b[1]-L*Math.sin(ang)-W*Math.cos(ang)];const p2=[b[0]-L*Math.cos(ang)-W*Math.sin(ang),b[1]-L*Math.sin(ang)+W*Math.cos(ang)];
+ svg.appendChild(rc.linearPath([p1,b,p2],{stroke,strokeWidth:2,roughness:0.8}));}
+function text(x,y,t,fs,c,fam,w,anchor){const e=document.createElementNS('http://www.w3.org/2000/svg','text');e.setAttribute('x',x);e.setAttribute('y',y);e.setAttribute('font-size',fs);e.setAttribute('fill',c);e.setAttribute('font-family',fam);e.setAttribute('font-weight',w);e.setAttribute('text-anchor',anchor);e.textContent=t;svg.appendChild(e);}
+rect(260,140,560,460,'#FDF7EA','#3F6472',1.0);
+rect(260,650,900,210,'#F7EDDA','#79513C',1.0);
+arrow([[240, 224], [290, 224]],'#51463C');
+arrow([[510, 224], [550, 224]],'#51463C');
+arrow([[670, 258], [670, 279], [400, 279], [400, 300]],'#51463C');
+arrow([[510, 334], [900, 334]],'#51463C');
+arrow([[400, 368], [400, 434], [550, 434]],'#51463C');
+arrow([[670, 468], [670, 534], [510, 534]],'#51463C');
+arrow([[370, 568], [370, 608], [640, 608], [640, 710]],'#51463C');
+arrow([[440, 568], [440, 628], [845, 628], [845, 710]],'#51463C');
+arrow([[640, 778], [640, 804], [1055, 804], [1055, 778]],'#51463C');
+arrow([[930, 744], [960, 744]],'#51463C');
+rect(40,190,200,68,'#EFCDB4','#C85A32',1.0);
+rect(290,190,220,68,'#C9D6DC','#3F6472',1.0);
+rect(550,190,240,68,'#C9D6DC','#3F6472',1.0);
+rect(290,300,220,68,'#C9D6DC','#3F6472',1.0);
+rect(550,400,240,68,'#C9D6DC','#3F6472',1.0);
+rect(290,500,220,68,'#C9D6DC','#3F6472',1.0);
+rect(900,300,260,68,'#EFCDB4','#C85A32',1.0);
+rect(550,710,180,68,'#C9D6DC','#3F6472',1.0);
+rect(760,710,170,68,'#C9D6DC','#3F6472',1.0);
+rect(960,710,190,68,'#EFCDB4','#C85A32',1.0);
+text(272,165.1,"LlmObservabilityLab.Api",18,'#3F6472',"'Karla', sans-serif",'600','start');
+text(272,675.1,"grafana/otel-lgtm (Docker)",18,'#79513C',"'Karla', sans-serif",'600','start');
+text(140,219.3,"team client",14,'#8F3D22',"'Courier Prime', monospace",'400','middle');
+text(140,236.8,"X-Team-Id: engineering",14,'#8F3D22',"'Courier Prime', monospace",'400','middle');
+text(400,219.3,"TeamContextMiddleware",14,'#26211C',"'Courier Prime', monospace",'400','middle');
+text(400,236.8,"header -> team.id",14,'#26211C',"'Courier Prime', monospace",'400','middle');
+text(670,219.3,"rate limiter",14,'#26211C',"'Courier Prime', monospace",'400','middle');
+text(670,236.8,"per team, 429 over quota",14,'#26211C',"'Courier Prime', monospace",'400','middle');
+text(400,339.2,"AskChatUseCase.Ask",16,'#26211C',"'Courier Prime', monospace",'400','middle');
+text(670,429.3,"AiUsageMeter",14,'#26211C',"'Courier Prime', monospace",'400','middle');
+text(670,446.8,"ai_meter.tokens",14,'#26211C',"'Courier Prime', monospace",'400','middle');
+text(400,529.3,"OpenTelemetry",14,'#26211C',"'Courier Prime', monospace",'400','middle');
+text(400,546.8,"OTLP -> :4317",14,'#26211C',"'Courier Prime', monospace",'400','middle');
+text(1030,329.3,"Azure OpenAI",14,'#8F3D22',"'Courier Prime', monospace",'400','middle');
+text(1030,346.8,"or FakeChatClient",14,'#8F3D22',"'Courier Prime', monospace",'400','middle');
+text(640,749.2,"Prometheus",16,'#26211C',"'Courier Prime', monospace",'400','middle');
+text(845,749.2,"Tempo + Loki",16,'#26211C',"'Courier Prime', monospace",'400','middle');
+text(1055,739.3,"Grafana",14,'#8F3D22',"'Courier Prime', monospace",'400','middle');
+text(1055,756.8,"AI Meter dashboard",14,'#8F3D22',"'Courier Prime', monospace",'400','middle');
+</script></body></html>

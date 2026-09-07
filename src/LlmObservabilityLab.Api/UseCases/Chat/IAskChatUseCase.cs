@@ -7,3 +7,4 @@ public interface IAskChatUseCase
         string teamId,
         CancellationToken cancellationToken);
 }
+ 
