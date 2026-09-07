@@ -10,11 +10,6 @@ using Scalar.AspNetCore;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
-string azureOpenAiEndpoint = builder.Configuration["AzureOpenAI:Endpoint"]
-    ?? throw new InvalidOperationException("AzureOpenAI:Endpoint is required.");
-string azureOpenAiDeploymentName = builder.Configuration["AzureOpenAI:DeploymentName"]
-    ?? throw new InvalidOperationException("AzureOpenAI:DeploymentName is required.");
-
 builder.Services.AddControllers(options => options.Filters.Add<ExceptionFilter>());
 builder.Services.AddOpenApi();
 builder.Services.AddScoped<IAskChatUseCase, AskChatUseCase>();
@@ -34,13 +29,7 @@ bool useFakeChatClient = builder.Environment.IsDevelopment()
     && builder.Configuration.GetValue<bool>("AzureOpenAI:UseFakeClient");
 
 builder.Services
-    .AddChatClient(_ => useFakeChatClient
-        ? new FakeChatClient()
-        : new AzureOpenAIClient(
-                new Uri(azureOpenAiEndpoint),
-                new DefaultAzureCredential(credentialOptions))
-            .GetChatClient(azureOpenAiDeploymentName)
-            .AsIChatClient())
+    .AddChatClient(_ => useFakeChatClient ? new FakeChatClient() : CreateAzureOpenAIChatClient())
     .UseOpenTelemetry(configure: client => client.EnableSensitiveData = captureSensitiveData);
 
 WebApplication app = builder.Build();
@@ -58,5 +47,17 @@ app.UseRateLimiter();
 app.MapControllers();
 
 app.Run();
+
+IChatClient CreateAzureOpenAIChatClient()
+{
+    string endpoint = builder.Configuration["AzureOpenAI:Endpoint"]
+        ?? throw new InvalidOperationException("AzureOpenAI:Endpoint is required.");
+    string deploymentName = builder.Configuration["AzureOpenAI:DeploymentName"]
+        ?? throw new InvalidOperationException("AzureOpenAI:DeploymentName is required.");
+
+    return new AzureOpenAIClient(new Uri(endpoint), new DefaultAzureCredential(credentialOptions))
+        .GetChatClient(deploymentName)
+        .AsIChatClient();
+}
 
 public partial class Program;

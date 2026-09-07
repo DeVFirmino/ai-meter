@@ -118,7 +118,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (team_id) (last_over_time(http_server_request_duration_seconds_count{http_route=\"api/chat\", http_response_status_code=~\"4..|5..\"}[$__range]))",
+          "expr": "sum by (team_id) (last_over_time(http_server_request_duration_seconds_count{http_route=\"api/chat\", team_id!=\"\", http_response_status_code=~\"4..|5..\"}[$__range]))",
           "legendFormat": "{{team_id}}"
         }
       ],
@@ -292,7 +292,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (team_id) (last_over_time(http_server_request_duration_seconds_count{http_route=\"api/chat\", http_response_status_code=\"429\"}[$__range]))",
+          "expr": "sum by (team_id) (last_over_time(http_server_request_duration_seconds_count{http_route=\"api/chat\", team_id!=\"\", http_response_status_code=\"429\"}[$__range]))",
           "legendFormat": "{{team_id}}"
         }
       ],
