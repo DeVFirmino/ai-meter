@@ -4,7 +4,7 @@ using Microsoft.Extensions.AI;
 using LlmObservabilityLab.Api.Teams;
 using LlmObservabilityLab.Api.Telemetry;
 
-namespace LlmObservabilityLab.Api.UseCases.Chat;
+namespace LlmObservabilityLab.Api.UseCases.Chat.Ask;
 
 public sealed class AskChatUseCase : IAskChatUseCase
 {
@@ -51,7 +51,7 @@ public sealed class AskChatUseCase : IAskChatUseCase
 
     private static void Validate(AskChatRequest request)
     {
-        AskChatValidator validator = new AskChatValidator();
+        var validator = new AskChatValidator();
         ValidationResult validationResult = validator.Validate(request);
         if (validationResult.IsValid is false)
         {

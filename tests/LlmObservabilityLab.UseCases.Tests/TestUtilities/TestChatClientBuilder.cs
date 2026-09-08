@@ -62,10 +62,16 @@ public sealed class TestChatClientBuilder
     {
         _chatClient.Verify(client => client.GetResponseAsync(
             It.IsAny<IEnumerable<ChatMessage>>(),
-            It.Is<ChatOptions?>(options =>
-                options != null && options.AdditionalProperties != null &&
-                (string)options.AdditionalProperties["team.id"]! == teamId),
+            It.Is<ChatOptions?>(options => HasTeam(options, teamId)),
             It.IsAny<CancellationToken>()),
             Times.Once);
+    }
+
+    private static bool HasTeam(ChatOptions? options, string teamId)
+    {
+        return options?.AdditionalProperties is not null
+            && options.AdditionalProperties.TryGetValue("team.id", out object? value)
+            && value is string actualTeamId
+            && actualTeamId == teamId;
     }
 }

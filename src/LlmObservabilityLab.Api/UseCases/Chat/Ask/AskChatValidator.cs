@@ -1,7 +1,7 @@
 using FluentValidation;
 using LlmObservabilityLab.Api.Errors;
 
-namespace LlmObservabilityLab.Api.UseCases.Chat;
+namespace LlmObservabilityLab.Api.UseCases.Chat.Ask;
 
 public sealed class AskChatValidator : AbstractValidator<AskChatRequest>
 {

@@ -1,5 +1,5 @@
 using LlmObservabilityLab.Api.Errors;
-using LlmObservabilityLab.Api.UseCases.Chat;
+using LlmObservabilityLab.Api.UseCases.Chat.Ask;
 using LlmObservabilityLab.Api.Teams;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
@@ -15,6 +15,7 @@ public sealed class ChatController : ControllerBase
     [ProducesResponseType(typeof(AskChatResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status429TooManyRequests)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> Ask(
         [FromServices] IAskChatUseCase useCase,
         [FromServices] TeamContext teamContext,
