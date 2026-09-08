@@ -1,12 +1,9 @@
 using System.Net;
 using System.Net.Http.Json;
-using System.Text;
-using System.Text.Json;
 using FluentAssertions;
 using LlmObservabilityLab.Api.Errors;
 using LlmObservabilityLab.Api.UseCases.Chat.Ask;
 using LlmObservabilityLab.WebApi.Tests.TestUtilities;
-using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.AI;
 
 namespace LlmObservabilityLab.WebApi.Tests.Controllers;
@@ -19,8 +16,8 @@ public sealed class ChatControllerTests
     public async Task ShouldPassTeamToChatClientWhenHeaderIsValid(string teamId)
     {
         await using ChatApiFactory factory = new();
-        using HttpClient client = CreateClient(factory);
-        using HttpRequestMessage request = CreateRequest(teamId);
+        using HttpClient client = factory.CreateChatClient();
+        using HttpRequestMessage request = new ChatRequestBuilder(teamId).Build();
 
         using HttpResponseMessage response = await client.SendAsync(request);
 
@@ -40,8 +37,8 @@ public sealed class ChatControllerTests
     public async Task ShouldRejectRequestWithoutCallingModelWhenTeamIsInvalid(string? teamId)
     {
         await using ChatApiFactory factory = new();
-        using HttpClient client = CreateClient(factory);
-        using HttpRequestMessage request = CreateRequest(teamId);
+        using HttpClient client = factory.CreateChatClient();
+        using HttpRequestMessage request = new ChatRequestBuilder(teamId).Build();
 
         using HttpResponseMessage response = await client.SendAsync(request);
 
@@ -55,8 +52,8 @@ public sealed class ChatControllerTests
     public async Task ShouldRejectRequestWhenTeamHeaderHasMultipleValues()
     {
         await using ChatApiFactory factory = new();
-        using HttpClient client = CreateClient(factory);
-        using HttpRequestMessage request = CreateRequest("engineering");
+        using HttpClient client = factory.CreateChatClient();
+        using HttpRequestMessage request = new ChatRequestBuilder("engineering").Build();
         request.Headers.TryAddWithoutValidation("X-Team-Id", "support");
 
         using HttpResponseMessage response = await client.SendAsync(request);
@@ -69,9 +66,9 @@ public sealed class ChatControllerTests
     public async Task ShouldKeepOptionsSeparateWhenTeamsSendConcurrentRequests()
     {
         await using ChatApiFactory factory = new();
-        using HttpClient client = CreateClient(factory);
-        using HttpRequestMessage engineeringRequest = CreateRequest("engineering");
-        using HttpRequestMessage supportRequest = CreateRequest("support");
+        using HttpClient client = factory.CreateChatClient();
+        using HttpRequestMessage engineeringRequest = new ChatRequestBuilder("engineering").Build();
+        using HttpRequestMessage supportRequest = new ChatRequestBuilder("support").Build();
 
         Task<HttpResponseMessage> engineeringTask = client.SendAsync(engineeringRequest);
         Task<HttpResponseMessage> supportTask = client.SendAsync(supportRequest);
@@ -95,8 +92,8 @@ public sealed class ChatControllerTests
     public async Task ShouldReturnPromptValidationErrorWhenTeamIsValidAndPromptIsEmpty()
     {
         await using ChatApiFactory factory = new();
-        using HttpClient client = CreateClient(factory);
-        using HttpRequestMessage request = CreateRequest("engineering", string.Empty);
+        using HttpClient client = factory.CreateChatClient();
+        using HttpRequestMessage request = new ChatRequestBuilder("engineering").WithPrompt(string.Empty).Build();
 
         using HttpResponseMessage response = await client.SendAsync(request);
 
@@ -110,7 +107,7 @@ public sealed class ChatControllerTests
     public async Task ShouldServeOpenApiWhenTeamHeaderIsAbsent()
     {
         await using ChatApiFactory factory = new();
-        using HttpClient client = CreateClient(factory);
+        using HttpClient client = factory.CreateChatClient();
 
         using HttpResponseMessage response = await client.GetAsync("/openapi/v1.json");
 
@@ -126,17 +123,14 @@ public sealed class ChatControllerTests
     public async Task ShouldReturnErrorResponseWhenRequestBodyCannotBeBound(string json)
     {
         await using ChatApiFactory factory = new();
-        using HttpClient client = CreateClient(factory);
-        using HttpRequestMessage request = CreateRequest("engineering");
-        request.Content = new StringContent(json, Encoding.UTF8, "application/json");
+        using HttpClient client = factory.CreateChatClient();
+        using HttpRequestMessage request = new ChatRequestBuilder("engineering").WithJson(json).Build();
 
         using HttpResponseMessage response = await client.SendAsync(request);
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
-        JsonElement body = await response.Content.ReadFromJsonAsync<JsonElement>();
-        body.GetProperty("errors").ValueKind.Should().Be(JsonValueKind.Array);
-        body.GetProperty("errors").EnumerateArray()
-            .Select(error => error.GetString()).Should().Equal(ErrorMessages.ValidationFailed);
+        ErrorResponse? body = await response.Content.ReadFromJsonAsync<ErrorResponse>();
+        body.Should().BeOfType<ErrorResponse>().Subject.Errors.Should().Equal(ErrorMessages.ValidationFailed);
         factory.ChatClient.VerifyNotCalled();
     }
 
@@ -146,41 +140,14 @@ public sealed class ChatControllerTests
     public async Task ShouldReturnPromptValidationErrorWhenPromptIsMissing(string json)
     {
         await using ChatApiFactory factory = new();
-        using HttpClient client = CreateClient(factory);
-        using HttpRequestMessage request = CreateRequest("engineering");
-        request.Content = new StringContent(json, Encoding.UTF8, "application/json");
+        using HttpClient client = factory.CreateChatClient();
+        using HttpRequestMessage request = new ChatRequestBuilder("engineering").WithJson(json).Build();
 
         using HttpResponseMessage response = await client.SendAsync(request);
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
-        JsonElement body = await response.Content.ReadFromJsonAsync<JsonElement>();
-        body.GetProperty("errors").ValueKind.Should().Be(JsonValueKind.Array);
-        body.GetProperty("errors").EnumerateArray()
-            .Select(error => error.GetString()).Should().Equal(ErrorMessages.PromptRequired);
+        ErrorResponse? body = await response.Content.ReadFromJsonAsync<ErrorResponse>();
+        body.Should().BeOfType<ErrorResponse>().Subject.Errors.Should().Equal(ErrorMessages.PromptRequired);
         factory.ChatClient.VerifyNotCalled();
-    }
-
-    private static HttpClient CreateClient(ChatApiFactory factory)
-    {
-        return factory.CreateClient(new WebApplicationFactoryClientOptions
-        {
-            BaseAddress = new Uri("https://localhost"),
-            AllowAutoRedirect = false,
-        });
-    }
-
-    private static HttpRequestMessage CreateRequest(string? teamId, string prompt = "Explain observability.")
-    {
-        HttpRequestMessage request = new(HttpMethod.Post, "/api/chat")
-        {
-            Content = JsonContent.Create(new AskChatRequest { Prompt = prompt }),
-        };
-
-        if (teamId is not null)
-        {
-            request.Headers.TryAddWithoutValidation("X-Team-Id", teamId);
-        }
-
-        return request;
     }
 }

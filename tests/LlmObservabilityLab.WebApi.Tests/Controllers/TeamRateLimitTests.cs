@@ -2,9 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using FluentAssertions;
 using LlmObservabilityLab.Api.Errors;
-using LlmObservabilityLab.Api.UseCases.Chat.Ask;
 using LlmObservabilityLab.WebApi.Tests.TestUtilities;
-using Microsoft.AspNetCore.Mvc.Testing;
 
 namespace LlmObservabilityLab.WebApi.Tests.Controllers;
 
@@ -14,11 +12,11 @@ public sealed class TeamRateLimitTests
     public async Task ShouldRejectWith429WhenTeamExceedsItsRequestsPerMinute()
     {
         await using ChatApiFactory factory = new() { RequestsPerMinute = 2 };
-        using HttpClient client = CreateClient(factory);
+        using HttpClient client = factory.CreateChatClient();
 
         HttpStatusCode first = await AskAsync(client, "engineering", CancellationToken.None);
         HttpStatusCode second = await AskAsync(client, "engineering", CancellationToken.None);
-        using HttpRequestMessage request = CreateRequest("engineering");
+        using HttpRequestMessage request = new ChatRequestBuilder("engineering").Build();
         using HttpResponseMessage third = await client.SendAsync(request);
 
         first.Should().Be(HttpStatusCode.OK);
@@ -34,7 +32,7 @@ public sealed class TeamRateLimitTests
     public async Task ShouldNotConsumeTheOtherTeamsQuotaWhenOneTeamIsLimited()
     {
         await using ChatApiFactory factory = new() { RequestsPerMinute = 1 };
-        using HttpClient client = CreateClient(factory);
+        using HttpClient client = factory.CreateChatClient();
 
         HttpStatusCode engineeringFirst = await AskAsync(client, "engineering", CancellationToken.None);
         HttpStatusCode engineeringSecond = await AskAsync(client, "engineering", CancellationToken.None);
@@ -50,7 +48,7 @@ public sealed class TeamRateLimitTests
     public async Task ShouldRejectBeforeRateLimitingWhenTeamIsInvalid()
     {
         await using ChatApiFactory factory = new() { RequestsPerMinute = 1 };
-        using HttpClient client = CreateClient(factory);
+        using HttpClient client = factory.CreateChatClient();
 
         HttpStatusCode status = await AskAsync(client, "marketing", CancellationToken.None);
 
@@ -63,27 +61,8 @@ public sealed class TeamRateLimitTests
         string teamId,
         CancellationToken cancellationToken)
     {
-        using HttpRequestMessage request = CreateRequest(teamId);
+        using HttpRequestMessage request = new ChatRequestBuilder(teamId).Build();
         using HttpResponseMessage response = await client.SendAsync(request, cancellationToken);
         return response.StatusCode;
-    }
-
-    private static HttpClient CreateClient(ChatApiFactory factory)
-    {
-        return factory.CreateClient(new WebApplicationFactoryClientOptions
-        {
-            BaseAddress = new Uri("https://localhost"),
-            AllowAutoRedirect = false,
-        });
-    }
-
-    private static HttpRequestMessage CreateRequest(string teamId)
-    {
-        HttpRequestMessage request = new(HttpMethod.Post, "/api/chat")
-        {
-            Content = JsonContent.Create(new AskChatRequest { Prompt = "Explain observability." }),
-        };
-        request.Headers.TryAddWithoutValidation("X-Team-Id", teamId);
-        return request;
     }
 }
