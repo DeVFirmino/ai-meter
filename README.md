@@ -1,24 +1,12 @@
 # AI Meter
 
-AI Meter is an ASP.NET Core lab for tracking LLM token usage and estimated cost per team with OpenTelemetry and Grafana. Tokens are grouped by model, the cost estimate uses the reference prices for gpt-4.1-mini, and each team has its own request rate limit.
-
-Run the lab with a fake model first, then follow the request through team identification, token recording and the limiter. The same flow can call your Azure OpenAI deployment.
+AI Meter is an ASP.NET Core lab for tracking LLM token usage, estimated cost, failures and latency per team with OpenTelemetry and Grafana. Each team has its own request limit.
 
 Read the accompanying blog post: [AI Meter: run a lab for LLM usage, estimated cost and team limits](https://danieldias.dev/en/blog/ai-meter-usage-and-cost-per-team).
 
 ![Grafana showing simulated token usage and estimated cost for engineering and support, with three engineering calls blocked by the request limit](docs/img/ai-meter-grafana-demo.png)
 
-The screenshot uses the fake model: token counts are invented and the displayed cost represents no actual spending.
-
-## What you get
-
-With two teams sending traffic, the Grafana dashboard shows:
-
-- Estimated cost per team, from tokens times the model's reference price.
-- Accumulated tokens per team, split by input and output and by model.
-- Tokens per minute by team and type.
-- Rejected calls (4xx and 5xx) per team, with a separate panel for calls blocked by the quota (429).
-- p95 latency of `/api/chat` per team.
+This earlier capture uses simulated data. Its totals differ from the repeatable demo below and represent no actual spending.
 
 ## Run the lab
 
@@ -34,7 +22,7 @@ AzureOpenAI__UseFakeClient=true Teams__RequestsPerMinute=2 \
 
 If the `lgtm` container already exists, use `docker start lgtm`. The `http` profile selects Development, listens on `http://localhost:5286` and exports OTLP to `http://localhost:4317`.
 
-The fake client returns `Fake answer for the AI Meter lab.` after a short simulated delay. Its model ID is `gpt-4.1-mini-fake`, and its token counts are invented. It makes no Azure calls and is available only in Development.
+The fake client reports 100,000 input tokens and 10,000 output tokens on every successful call, with a fixed simulated delay of 100 ms. It returns `Fake answer for the AI Meter lab.` as model `gpt-4.1-mini-fake`. It makes no Azure calls and is available only in Development. HTTP latency also includes application overhead.
 
 Open [Grafana](http://localhost:3000), sign in with `admin` / `admin`, go to Dashboards, New, Import, and upload [grafana/dashboards/ai-meter.json](grafana/dashboards/ai-meter.json).
 
@@ -62,125 +50,22 @@ Expect HTTP 200 and `{"text":"Fake answer for the AI Meter lab."}`. Engineering 
 
 After the next metrics export, normally about a minute later, Grafana should show tokens for both teams and one blocked engineering call. The p95 panel and tokens-per-minute panel need multiple samples, so keep sending traffic over several minutes to inspect them.
 
-### 3. Connect a real model
+These requests produce the following simulated usage, assuming a fresh API and no other traffic:
 
-Stop the fake API. With Azure CLI installed, run `az login` using an identity that has the `Cognitive Services OpenAI User` role on your resource. Then supply the resource endpoint and deployment name:
+| Team | Successful calls | Blocked calls | Input tokens | Output tokens | Estimated cost (USD) |
+|---|---:|---:|---:|---:|---:|
+| engineering | 2 | 1 | 200,000 | 20,000 | 0.112 |
+| support | 1 | 0 | 100,000 | 10,000 | 0.056 |
 
-```bash
-AzureOpenAI__UseFakeClient=false \
-  AzureOpenAI__Endpoint='https://<resource>.openai.azure.com/' \
-  AzureOpenAI__DeploymentName=gpt-4.1-mini \
-  dotnet run --project src/LlmObservabilityLab.Api --launch-profile http
-```
+The cost uses the dashboard's configured reference rates: 0.40 USD per million input tokens and 1.60 USD per million output tokens. These simulated values do not represent a bill. Prices apply to all models in the current query, so update the query before using another model.
 
-The client uses `Azure.AI.OpenAI` and `DefaultAzureCredential`. The SDK handles the service API path, so configure the resource endpoint shown above. Managed Identity is excluded in Development and remains available in other environments. Real calls consume your Azure quota.
-
-| Setting | Meaning |
-|---|---|
-| `AzureOpenAI:UseFakeClient` | Select the simulated client in Development; defaults to false. |
-| `AzureOpenAI:Endpoint` | Resource endpoint, required when the real client is resolved. |
-| `AzureOpenAI:DeploymentName` | Azure deployment name, required for the real client. |
-| `Teams:RequestsPerMinute` | Requests per team in a 60-second fixed window; defaults to 60. |
-| `OTEL_EXPORTER_OTLP_ENDPOINT` | OTLP destination; local launch profiles set `http://localhost:4317`. |
-
-Use double underscores for nested environment settings, as in `Teams__RequestsPerMinute`. Prompt and response capture is explicitly enabled in Development and disabled elsewhere in [ChatClientRegistration](src/LlmObservabilityLab.Api/ChatClients/ChatClientRegistration.cs). Use synthetic prompts in the lab.
-
-## How it fits together
-
-![AI Meter architecture](docs/img/ai-meter-architecture.png)
-
-The caller sends `POST /api/chat` with an `X-Team-Id` header. A middleware validates the team and tags the trace, the log scope and the ASP.NET request metric with it. The rate limiter keeps one window per team and answers 429 above the quota. The use case calls the model through `IChatClient` and records the returned token usage in a counter tagged with team and model. OpenTelemetry exports everything over OTLP to the `grafana/otel-lgtm` container, and the dashboard in `grafana/dashboards/ai-meter.json` reads Prometheus.
-
-## Identify the team on every call
-
-`TeamContextMiddleware` reads the header once, rejects unknown teams before the controller runs, and copies the team to traces, logs and request metrics:
-
-```csharp
-if (TryReadTeam(context.Request, out string teamId) is false)
-{
-    await RejectAsync(context);
-    return;
-}
-
-_teamContext.TeamId = teamId;
-Activity.Current?.SetTag(TeamContext.PropertyName, teamId);
-context.Features.Get<IHttpMetricsTagsFeature>()?.Tags.Add(
-    new KeyValuePair<string, object?>(TeamContext.PropertyName, teamId));
-```
-
-`TeamContext` is a scoped object, so the controller and the rate limiter read the same team for the rest of the request. The `IHttpMetricsTagsFeature` line is what makes latency and failures per team possible without a second histogram: ASP.NET already measures every request, and this adds `team.id` to that measurement.
-
-In this lab the team is a header value. In your API it has to come from the caller's identity, otherwise anyone can pick another team's quota by editing a header.
-
-## Count tokens per team and model
-
-`AiUsageMeter` owns one counter, `ai_meter.tokens`, created through `IMeterFactory`. After each model call, the use case records what the model reported:
-
-```csharp
-_usageMeter.RecordTokens(
-    teamId,
-    chatResponse.ModelId,
-    chatResponse.Usage?.InputTokenCount ?? 0,
-    chatResponse.Usage?.OutputTokenCount ?? 0);
-```
-
-Each measurement carries three tags: `team.id`, `token.type` (`input` or `output`) and `gen_ai.request.model`. The model tag matters for cost, because prices differ per model and per direction. `ModelId` comes from the response, so it carries the exact model version the provider served.
-
-## Export to Grafana
-
-`TelemetryRegistration` enables ASP.NET Core and HttpClient instrumentation, listens to the `Experimental.Microsoft.Extensions.AI` source and meter, adds the `AiMeter` meter, and sends traces, metrics and logs through one OTLP exporter. In Prometheus the counter appears as `ai_meter_tokens_total` with labels `team_id`, `token_type` and `gen_ai_request_model`.
-
-## Turn tokens into money
-
-The dashboard calculates cost in PromQL using its configured reference prices for gpt-4.1-mini: 0.40 USD per million input tokens and 1.60 USD per million output tokens, labelled September 2026 in the JSON:
-
-```promql
-sum by (team_id) (last_over_time(ai_meter_tokens_total{token_type="input"}[$__range])) * 0.40 / 1e6
-+ sum by (team_id) (last_over_time(ai_meter_tokens_total{token_type="output"}[$__range])) * 1.60 / 1e6
-```
-
-Prices can change in the query without an API deploy. The result estimates token cost and does not reconcile the Azure invoice. The cumulative panels use `last_over_time`, which reads the latest sample in the selected range, so they mean "since the API started". `increase()` measures growth between samples, and a short run whose first sample already contains all the calls shows zero. For continuous traffic, use `increase()` to measure consumption over an interval; the tokens-per-minute panel uses `rate()`.
-
-The cost query applies those rates to all recorded models, including the fake model. If you change models or mix them, update the query to filter and price each model before using the estimate.
-
-## Cap each team
-
-ASP.NET Core's built-in rate limiter partitions requests by the resolved team:
-
-```csharp
-options.AddPolicy(PolicyName, httpContext =>
-{
-    string teamId = httpContext.RequestServices.GetRequiredService<TeamContext>().TeamId;
-
-    return RateLimitPartition.GetFixedWindowLimiter(teamId, _ => new FixedWindowRateLimiterOptions
-    {
-        PermitLimit = requestsPerMinute,
-        Window = TimeSpan.FromMinutes(1),
-        QueueLimit = 0,
-    });
-});
-```
-
-`ChatController` opts in with `[EnableRateLimiting("per-team")]`, so other endpoints stay unlimited. The quota comes from `Teams:RequestsPerMinute` (60 by default). A rejected call gets 429, a `Retry-After` header and the same error body the API uses everywhere. Because the request metric already carries the team, the 429s show up per team in Grafana with no extra code.
+To connect Azure OpenAI, follow [the real-model setup](docs/lab-guide.md#connect-a-real-model). The [lab guide](docs/lab-guide.md) also explains telemetry, cost queries and troubleshooting.
 
 ## Code conventions
 
-The API is one executable project with folders for the responsibilities it already has. [Program.cs](src/LlmObservabilityLab.Api/Program.cs) shows the HTTP pipeline in order: routing, team resolution, rate limiting and controllers. [DependencyInjectionExtension](src/LlmObservabilityLab.Api/DependencyInjectionExtension.cs) registers the application through `AddApi`, while the client and telemetry registrations own their respective configuration.
+The API uses MVC controllers with dependencies injected into each action, and one use case per operation. The chat operation exposes `IAskChatUseCase.Ask`. Validation runs inside the use case and HTTP 400 errors share `ErrorResponse`.
 
-| Concern | Convention in this repository |
-|---|---|
-| HTTP | MVC controllers, literal routes, explicit binding attributes and dependencies injected into each action with `[FromServices]`. Actions return `IActionResult` and declare response types. |
-| Operations | One folder per operation under `UseCases/<Area>/<Operation>`, containing the interface, use case, validator and request/response records. |
-| Use case methods | One public method with the operation's verb: `IAskChatUseCase.Ask`. This project explicitly overrides the house convention of `Execute`. |
-| Async work | Required `CancellationToken` as the last parameter, passed to I/O. Other async methods use `Async`; controller actions, test names and framework signatures follow their own contracts. |
-| Validation | FluentValidation runs at the start of the use case. Request records use named properties with defaults; response records use `required` named properties. |
-| Errors | `ErrorResponse` contains an `errors` array and optional `correlationId`. MVC binding failures, team rejection and quota rejection use that shape. `ExceptionFilter` maps application exceptions and hides unexpected exception details. |
-| C# | File-scoped namespaces matching folders, sealed concrete classes, explicit constructors and readonly dependency fields. Types stay visible at declaration sites; nullable warnings and build warnings are errors. |
-| Tests | `Should...When...` names, FluentAssertions and Moq behind builders. Use case, validator and HTTP tests have separate projects. |
-
-The controller passes the team as a string to `Ask`; the use case has no `HttpContext` dependency. Validation stays in the operation so callers outside MVC receive the same rules. Avoid adding a mediator, generic repository or extra application layers until a concrete responsibility needs them.
-
-Malformed JSON and bodies that cannot bind return HTTP 400 with `ErrorMessages.ValidationFailed`. An omitted, null or blank prompt reaches `AskChatValidator` and returns HTTP 400 with `ErrorMessages.PromptRequired`. Both responses use the same `errors` array.
+Keep explicit constructors, sealed concrete classes and namespaces matching folders. Tests use `Should...When...` names, FluentAssertions and Moq behind builders, in separate projects for use cases, validators and HTTP behaviour. The [convention details](docs/lab-guide.md#code-conventions) explain the boundaries.
 
 ## Verify a change
 
@@ -188,22 +73,8 @@ Malformed JSON and bodies that cannot bind return HTTP 400 with `ErrorMessages.V
 bash scripts/verify.sh
 ```
 
-The script restores packages, builds, runs all tests, checks formatting and reports vulnerable direct and transitive packages. The SDK is selected in `global.json`, package versions live in `Directory.Packages.props`, and `.editorconfig` supplies the code style settings used by build and format checks.
+The script restores packages, builds, runs tests, checks formatting and reports vulnerable packages. Tests run locally without Azure calls. Shared build settings are in `Directory.Build.props`, package versions in `Directory.Packages.props`, and formatting rules in `.editorconfig`.
 
-For a test-only run, use `dotnet test`. The tests replace the model client and make no Azure calls. They cover prompt validation, the error contract, token tags, concurrent team requests and independent quotas. Web API tests use `WebApplicationFactory<Program>` to exercise the real MVC pipeline.
+## Lab boundaries
 
-## Where this example stops
-
-- The team is a header. Production needs it from authentication.
-- The quota counts requests. Azure bills tokens, and a request limiter decides before the model reports usage, so a token budget needs a limiter of its own.
-- The quota is held in memory per API instance. Restarting clears it, and multiple instances each have their own allowance.
-- Prices live in the dashboard JSON. Configuration with a date is easier to audit.
-- The backend is a local container. Azure Monitor is the next stop for the same signals.
-
-## Troubleshooting
-
-After the Mac sleeps, the Docker VM's clock lags and Prometheus stamps samples hours in the past, so the dashboard looks empty. Widen the time range to find them, and check `docker exec lgtm date` before a demo.
-
-Grafana's metrics explorer does not list metrics that arrive over OTLP, because they carry no metadata. Type the metric name in Code mode.
-
-The first real call can spend seconds on local authentication. `DefaultAzureCredential` probes Managed Identity on a laptop, so the API excludes that credential in Development.
+Teams come from an `X-Team-Id` header; a deployed app needs identity from authentication. The quota counts requests and lives in memory per API instance. Restarting clears it. Development captures prompts and responses, so use synthetic prompts. See [the lab guide](docs/lab-guide.md#where-this-example-stops) for the remaining limitations.
