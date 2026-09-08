@@ -18,7 +18,7 @@ public static class TeamRateLimiting
         services.AddRateLimiter(options =>
         {
             options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
-            options.OnRejected = WriteRejection;
+            options.OnRejected = WriteRejectionAsync;
             options.AddPolicy(PolicyName, httpContext =>
             {
                 string teamId = httpContext.RequestServices.GetRequiredService<TeamContext>().TeamId;
@@ -35,7 +35,7 @@ public static class TeamRateLimiting
         return services;
     }
 
-    private static ValueTask WriteRejection(OnRejectedContext context, CancellationToken cancellationToken)
+    private static async ValueTask WriteRejectionAsync(OnRejectedContext context, CancellationToken cancellationToken)
     {
         if (context.Lease.TryGetMetadata(MetadataName.RetryAfter, out TimeSpan retryAfter))
         {
@@ -43,8 +43,8 @@ public static class TeamRateLimiting
                 ((int)Math.Ceiling(retryAfter.TotalSeconds)).ToString();
         }
 
-        return new ValueTask(context.HttpContext.Response.WriteAsJsonAsync(
+        await context.HttpContext.Response.WriteAsJsonAsync(
             new ErrorResponse { Errors = [ErrorMessages.TeamRateLimited] },
-            cancellationToken));
+            cancellationToken);
     }
 }

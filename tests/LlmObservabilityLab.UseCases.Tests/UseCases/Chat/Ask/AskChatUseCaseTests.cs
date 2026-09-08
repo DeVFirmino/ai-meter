@@ -1,12 +1,12 @@
 using System.Net;
 using FluentAssertions;
 using LlmObservabilityLab.Api.Errors;
-using LlmObservabilityLab.Api.UseCases.Chat;
+using LlmObservabilityLab.Api.UseCases.Chat.Ask;
 using LlmObservabilityLab.UseCases.Tests.TestUtilities;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Diagnostics.Metrics.Testing;
 
-namespace LlmObservabilityLab.UseCases.Tests.UseCases.Chat;
+namespace LlmObservabilityLab.UseCases.Tests.UseCases.Chat.Ask;
 
 public sealed class AskChatUseCaseTests
 {
@@ -59,7 +59,7 @@ public sealed class AskChatUseCaseTests
     }
 
     [Fact]
-    public async Task ShouldRecordInputAndOutputTokensTaggedWithTeamAndModel()
+    public async Task ShouldRecordTokensWithTeamAndModelWhenClientReportsUsage()
     {
         TestChatClientBuilder chatClientBuilder = new TestChatClientBuilder()
             .WithResponse("ok", inputTokens: 12, outputTokens: 40, modelId: "gpt-4.1-mini");
@@ -75,8 +75,8 @@ public sealed class AskChatUseCaseTests
 
         IReadOnlyList<CollectedMeasurement<long>> measurements = probe.Collector.GetMeasurementSnapshot();
         measurements.Should().HaveCount(2);
-        CollectedMeasurement<long> input = measurements.Single(m => (string?)m.Tags["token.type"] == "input");
-        CollectedMeasurement<long> output = measurements.Single(m => (string?)m.Tags["token.type"] == "output");
+        CollectedMeasurement<long> input = measurements.Single(measurement => (string?)measurement.Tags["token.type"] == "input");
+        CollectedMeasurement<long> output = measurements.Single(measurement => (string?)measurement.Tags["token.type"] == "output");
         input.Value.Should().Be(12);
         output.Value.Should().Be(40);
         foreach (CollectedMeasurement<long> measurement in measurements)
