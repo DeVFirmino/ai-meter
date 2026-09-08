@@ -1,36 +1,10 @@
-using Azure.AI.OpenAI;
-using Azure.Identity;
-using LlmObservabilityLab.Api.ChatClients;
-using LlmObservabilityLab.Api.Filters;
+using LlmObservabilityLab.Api;
 using LlmObservabilityLab.Api.Teams;
-using LlmObservabilityLab.Api.Telemetry;
-using LlmObservabilityLab.Api.UseCases.Chat;
-using Microsoft.Extensions.AI;
 using Scalar.AspNetCore;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddControllers(options => options.Filters.Add<ExceptionFilter>());
-builder.Services.AddOpenApi();
-builder.Services.AddScoped<IAskChatUseCase, AskChatUseCase>();
-builder.Services.AddScoped<TeamContext>();
-builder.Services.AddScoped<TeamContextMiddleware>();
-builder.Services.AddSingleton<AiUsageMeter>();
-builder.Services.AddTeamRateLimiting(builder.Configuration);
-builder.Services.AddTelemetry(builder.Environment.ApplicationName);
-
-bool captureSensitiveData = builder.Environment.IsDevelopment();
-DefaultAzureCredentialOptions credentialOptions = new()
-{
-    ExcludeManagedIdentityCredential = builder.Environment.IsDevelopment()
-};
-
-bool useFakeChatClient = builder.Environment.IsDevelopment()
-    && builder.Configuration.GetValue<bool>("AzureOpenAI:UseFakeClient");
-
-builder.Services
-    .AddChatClient(_ => useFakeChatClient ? new FakeChatClient() : CreateAzureOpenAIChatClient())
-    .UseOpenTelemetry(configure: client => client.EnableSensitiveData = captureSensitiveData);
+builder.Services.AddApi(builder.Configuration, builder.Environment);
 
 WebApplication app = builder.Build();
 
@@ -47,17 +21,5 @@ app.UseRateLimiter();
 app.MapControllers();
 
 app.Run();
-
-IChatClient CreateAzureOpenAIChatClient()
-{
-    string endpoint = builder.Configuration["AzureOpenAI:Endpoint"]
-        ?? throw new InvalidOperationException("AzureOpenAI:Endpoint is required.");
-    string deploymentName = builder.Configuration["AzureOpenAI:DeploymentName"]
-        ?? throw new InvalidOperationException("AzureOpenAI:DeploymentName is required.");
-
-    return new AzureOpenAIClient(new Uri(endpoint), new DefaultAzureCredential(credentialOptions))
-        .GetChatClient(deploymentName)
-        .AsIChatClient();
-}
 
 public partial class Program;

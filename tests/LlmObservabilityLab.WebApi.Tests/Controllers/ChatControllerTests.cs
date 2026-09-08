@@ -1,8 +1,10 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Text;
+using System.Text.Json;
 using FluentAssertions;
 using LlmObservabilityLab.Api.Errors;
-using LlmObservabilityLab.Api.UseCases.Chat;
+using LlmObservabilityLab.Api.UseCases.Chat.Ask;
 using LlmObservabilityLab.WebApi.Tests.TestUtilities;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.AI;
@@ -24,8 +26,7 @@ public sealed class ChatControllerTests
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         AskChatResponse? body = await response.Content.ReadFromJsonAsync<AskChatResponse>();
-        body.Should().NotBeNull();
-        body!.Text.Should().Be(teamId);
+        body.Should().BeOfType<AskChatResponse>().Subject.Text.Should().Be(teamId);
         factory.ChatClient.ReceivedOptions.Should().ContainSingle();
     }
 
@@ -46,8 +47,7 @@ public sealed class ChatControllerTests
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         ErrorResponse? body = await response.Content.ReadFromJsonAsync<ErrorResponse>();
-        body.Should().NotBeNull();
-        body!.Errors.Should().Equal(ErrorMessages.TeamInvalid);
+        body.Should().BeOfType<ErrorResponse>().Subject.Errors.Should().Equal(ErrorMessages.TeamInvalid);
         factory.ChatClient.VerifyNotCalled();
     }
 
@@ -83,8 +83,8 @@ public sealed class ChatControllerTests
         supportResponse.StatusCode.Should().Be(HttpStatusCode.OK);
         AskChatResponse? engineering = await engineeringResponse.Content.ReadFromJsonAsync<AskChatResponse>();
         AskChatResponse? support = await supportResponse.Content.ReadFromJsonAsync<AskChatResponse>();
-        engineering!.Text.Should().Be("engineering");
-        support!.Text.Should().Be("support");
+        engineering.Should().BeOfType<AskChatResponse>().Subject.Text.Should().Be("engineering");
+        support.Should().BeOfType<AskChatResponse>().Subject.Text.Should().Be("support");
         IReadOnlyList<ChatOptions> options = factory.ChatClient.ReceivedOptions;
         options.Should().HaveCount(2);
         options[0].Should().NotBeSameAs(options[1]);
@@ -102,7 +102,7 @@ public sealed class ChatControllerTests
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         ErrorResponse? body = await response.Content.ReadFromJsonAsync<ErrorResponse>();
-        body!.Errors.Should().Equal(ErrorMessages.PromptRequired);
+        body.Should().BeOfType<ErrorResponse>().Subject.Errors.Should().Equal(ErrorMessages.PromptRequired);
         factory.ChatClient.VerifyNotCalled();
     }
 
@@ -115,6 +115,48 @@ public sealed class ChatControllerTests
         using HttpResponseMessage response = await client.GetAsync("/openapi/v1.json");
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
+        factory.ChatClient.VerifyNotCalled();
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("null")]
+    [InlineData("{")]
+    [InlineData("{\"prompt\":42}")]
+    public async Task ShouldReturnErrorResponseWhenRequestBodyCannotBeBound(string json)
+    {
+        await using ChatApiFactory factory = new();
+        using HttpClient client = CreateClient(factory);
+        using HttpRequestMessage request = CreateRequest("engineering");
+        request.Content = new StringContent(json, Encoding.UTF8, "application/json");
+
+        using HttpResponseMessage response = await client.SendAsync(request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        JsonElement body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        body.GetProperty("errors").ValueKind.Should().Be(JsonValueKind.Array);
+        body.GetProperty("errors").EnumerateArray()
+            .Select(error => error.GetString()).Should().Equal(ErrorMessages.ValidationFailed);
+        factory.ChatClient.VerifyNotCalled();
+    }
+
+    [Theory]
+    [InlineData("{}")]
+    [InlineData("{\"prompt\":null}")]
+    public async Task ShouldReturnPromptValidationErrorWhenPromptIsMissing(string json)
+    {
+        await using ChatApiFactory factory = new();
+        using HttpClient client = CreateClient(factory);
+        using HttpRequestMessage request = CreateRequest("engineering");
+        request.Content = new StringContent(json, Encoding.UTF8, "application/json");
+
+        using HttpResponseMessage response = await client.SendAsync(request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        JsonElement body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        body.GetProperty("errors").ValueKind.Should().Be(JsonValueKind.Array);
+        body.GetProperty("errors").EnumerateArray()
+            .Select(error => error.GetString()).Should().Equal(ErrorMessages.PromptRequired);
         factory.ChatClient.VerifyNotCalled();
     }
 

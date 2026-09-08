@@ -1,4 +1,4 @@
-namespace LlmObservabilityLab.Api.UseCases.Chat;
+namespace LlmObservabilityLab.Api.UseCases.Chat.Ask;
 
 public sealed record AskChatRequest
 {

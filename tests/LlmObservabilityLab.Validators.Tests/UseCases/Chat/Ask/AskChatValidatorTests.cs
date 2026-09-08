@@ -1,9 +1,9 @@
 using FluentAssertions;
 using FluentValidation.TestHelper;
 using LlmObservabilityLab.Api.Errors;
-using LlmObservabilityLab.Api.UseCases.Chat;
+using LlmObservabilityLab.Api.UseCases.Chat.Ask;
 
-namespace LlmObservabilityLab.Validators.Tests.UseCases.Chat;
+namespace LlmObservabilityLab.Validators.Tests.UseCases.Chat.Ask;
 
 public sealed class AskChatValidatorTests
 {
@@ -18,6 +18,7 @@ public sealed class AskChatValidatorTests
         AskChatValidator validator = new AskChatValidator();
         var request = new AskChatRequest
         {
+            // HTTP deserialization can supply null despite the non-nullable contract.
             Prompt = prompt!,
         };
 

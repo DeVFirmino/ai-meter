@@ -1,4 +1,4 @@
-namespace LlmObservabilityLab.Api.UseCases.Chat;
+namespace LlmObservabilityLab.Api.UseCases.Chat.Ask;
 
 public interface IAskChatUseCase
 {
@@ -7,4 +7,4 @@ public interface IAskChatUseCase
         string teamId,
         CancellationToken cancellationToken);
 }
- 
+
