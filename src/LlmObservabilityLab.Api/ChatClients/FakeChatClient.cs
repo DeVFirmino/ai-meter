@@ -3,8 +3,8 @@ using Microsoft.Extensions.AI;
 namespace LlmObservabilityLab.Api.ChatClients;
 
 /// <summary>
-/// Development-only stand-in for Azure OpenAI: answers instantly with invented
-/// long-context token counts so the AI Meter dashboard can be filled at no cost.
+/// Development-only stand-in for Azure OpenAI with fixed simulated delay and
+/// token counts so the AI Meter demo has repeatable totals without Azure calls.
 /// </summary>
 public sealed class FakeChatClient : IChatClient
 {
@@ -13,15 +13,15 @@ public sealed class FakeChatClient : IChatClient
         ChatOptions? options = null,
         CancellationToken cancellationToken = default)
     {
-        await Task.Delay(Random.Shared.Next(20, 150), cancellationToken);
+        await Task.Delay(TimeSpan.FromMilliseconds(100), cancellationToken);
 
         return new ChatResponse(new ChatMessage(ChatRole.Assistant, "Fake answer for the AI Meter lab."))
         {
             ModelId = "gpt-4.1-mini-fake",
             Usage = new UsageDetails
             {
-                InputTokenCount = Random.Shared.Next(80_000, 600_000),
-                OutputTokenCount = Random.Shared.Next(8_000, 80_000),
+                InputTokenCount = 100_000,
+                OutputTokenCount = 10_000,
             },
         };
     }
