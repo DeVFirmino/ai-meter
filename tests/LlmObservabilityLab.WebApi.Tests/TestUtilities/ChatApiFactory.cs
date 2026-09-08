@@ -12,6 +12,15 @@ public sealed class ChatApiFactory : WebApplicationFactory<Program>
 
     public int RequestsPerMinute { get; init; } = 1000;
 
+    public HttpClient CreateChatClient()
+    {
+        return CreateClient(new WebApplicationFactoryClientOptions
+        {
+            BaseAddress = new Uri("https://localhost"),
+            AllowAutoRedirect = false,
+        });
+    }
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Development");
