@@ -82,7 +82,7 @@ public sealed class AskChatUseCaseTests
         foreach (CollectedMeasurement<long> measurement in measurements)
         {
             measurement.Tags["team.id"].Should().Be("support");
-            measurement.Tags["gen_ai.request.model"].Should().Be("gpt-4.1-mini");
+            measurement.Tags["gen_ai.response.model"].Should().Be("gpt-4.1-mini");
         }
     }
 }
