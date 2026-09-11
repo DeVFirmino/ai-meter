@@ -22,6 +22,7 @@ The client uses `Azure.AI.OpenAI` and `DefaultAzureCredential`. The SDK handles 
 | `AzureOpenAI:DeploymentName` | Azure deployment name, required for the real client. |
 | `Teams:RequestsPerMinute` | Requests per team in a 60-second fixed window; defaults to 60. |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | OTLP destination; local launch profiles set `http://localhost:4317`. |
+| `OTEL_METRIC_EXPORT_INTERVAL` | Milliseconds between metric exports. The OpenTelemetry default is 60000; the lab sets 5000 so panels fill in while you watch. |
 
 Use double underscores for nested environment settings, as in `Teams__RequestsPerMinute`. Prompt and response capture is explicitly enabled in Development and disabled elsewhere in [ChatClientRegistration](../src/LlmObservabilityLab.Api/ChatClients/ChatClientRegistration.cs). Use synthetic prompts in the lab.
 
@@ -64,11 +65,13 @@ _usageMeter.RecordTokens(
     chatResponse.Usage?.OutputTokenCount ?? 0);
 ```
 
-Each measurement carries three tags: `team.id`, `token.type` (`input` or `output`) and `gen_ai.request.model`. The model tag matters for cost, because prices differ per model and per direction. `ModelId` comes from the response, so it carries the exact model version the provider served.
+Each measurement carries three tags: `team.id`, `token.type` (`input` or `output`) and `gen_ai.response.model`. The model tag matters for cost, because prices differ per model and per direction. `ModelId` comes from the response, which is why the tag is the response model and not `gen_ai.request.model`: against a real deployment the two differ, the request one holding the deployment name and this one the dated model version served.
+
+Microsoft.Extensions.AI already exports `gen_ai.client.token.usage` through the same OTLP pipeline, but it carries no team attribute. That is why this lab adds a counter of its own.
 
 ## Export to Grafana
 
-`TelemetryRegistration` enables ASP.NET Core and HttpClient instrumentation, listens to the `Experimental.Microsoft.Extensions.AI` source and meter, adds the `AiMeter` meter, and sends traces, metrics and logs through one OTLP exporter. In Prometheus the counter appears as `ai_meter_tokens_total` with labels `team_id`, `token_type` and `gen_ai_request_model`.
+`TelemetryRegistration` enables ASP.NET Core and HttpClient instrumentation, listens to the `Experimental.Microsoft.Extensions.AI` source and meter, adds the `AiMeter` meter, and sends traces, metrics and logs through one OTLP exporter. In Prometheus the counter appears as `ai_meter_tokens_total` with labels `team_id`, `token_type` and `gen_ai_response_model`.
 
 ## Turn tokens into money
 
