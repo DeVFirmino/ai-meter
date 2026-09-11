@@ -35,7 +35,13 @@ public sealed class FakeChatClient : IChatClient
         throw new NotSupportedException("The fake client does not stream.");
     }
 
-    public object? GetService(Type serviceType, object? serviceKey = null) => null;
+    // OpenTelemetryChatClient reads ChatClientMetadata through here to fill
+    // gen_ai.provider.name and the model tags on the span. Returning null left them empty.
+    public object? GetService(Type serviceType, object? serviceKey = null) =>
+        serviceKey is not null ? null
+        : serviceType == typeof(ChatClientMetadata) ? new ChatClientMetadata("fake", null, "gpt-4.1-mini-fake")
+        : serviceType == typeof(FakeChatClient) ? this
+        : null;
 
     public void Dispose()
     {

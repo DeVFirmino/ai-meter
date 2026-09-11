@@ -10,17 +10,18 @@ This earlier capture uses simulated data. Its totals differ from the repeatable 
 
 ## Run the lab
 
-You need the .NET SDK selected by [global.json](global.json) and Docker. Run the commands below from the repository root.
+You need the .NET SDK selected by [global.json](global.json), Docker, and a Bash or Zsh terminal with `curl`. Run the commands below from the repository root.
 
 ### 1. Start Grafana and the API
 
 ```bash
 docker run -d --name lgtm -p 3000:3000 -p 4317:4317 grafana/otel-lgtm
 AzureOpenAI__UseFakeClient=true Teams__RequestsPerMinute=2 \
+  OTEL_METRIC_EXPORT_INTERVAL=5000 \
   dotnet run --project src/LlmObservabilityLab.Api --launch-profile http
 ```
 
-If the `lgtm` container already exists, use `docker start lgtm`. The `http` profile selects Development, listens on `http://localhost:5286` and exports OTLP to `http://localhost:4317`.
+If the `lgtm` container already exists, use `docker start lgtm`. The `http` profile selects Development, listens on `http://localhost:5286` and exports OTLP to `http://localhost:4317`. `OTEL_METRIC_EXPORT_INTERVAL=5000` shortens the metric export from the OpenTelemetry default of 60 seconds, so the dashboard fills in while you are still watching it.
 
 The fake client reports 100,000 input tokens and 10,000 output tokens on every successful call, with a fixed simulated delay of 100 ms. It returns `Fake answer for the AI Meter lab.` as model `gpt-4.1-mini-fake`. It makes no Azure calls and is available only in Development. HTTP latency also includes application overhead.
 
@@ -48,7 +49,7 @@ curl -i -X POST http://localhost:5286/api/chat \
 
 Expect HTTP 200 and `{"text":"Fake answer for the AI Meter lab."}`. Engineering has used its allowance, but support has its own window. Another engineering request within that window returns 429 with `Retry-After` and an `errors` array. Restart the API before repeating the whole sequence to clear both allowances.
 
-After the next metrics export, normally about a minute later, Grafana should show tokens for both teams and one blocked engineering call. The p95 panel and tokens-per-minute panel need multiple samples, so keep sending traffic over several minutes to inspect them.
+After the next metrics export, about five seconds later with the interval above, Grafana should show tokens for both teams and one blocked engineering call. The p95 panel and tokens-per-minute panel need multiple samples, so keep sending traffic over several minutes to inspect them.
 
 These requests produce the following simulated usage, assuming a fresh API and no other traffic:
 
@@ -58,6 +59,8 @@ These requests produce the following simulated usage, assuming a fresh API and n
 | support | 1 | 0 | 100,000 | 10,000 | 0.056 |
 
 The cost uses the dashboard's configured reference rates: 0.40 USD per million input tokens and 1.60 USD per million output tokens. These simulated values do not represent a bill. Prices apply to all models in the current query, so update the query before using another model.
+
+To stop the lab, press Ctrl+C in the API terminal and run `docker stop lgtm` when you no longer need Grafana.
 
 To connect Azure OpenAI, follow [the real-model setup](docs/lab-guide.md#connect-a-real-model). The [lab guide](docs/lab-guide.md) also explains telemetry, cost queries and troubleshooting.
 
