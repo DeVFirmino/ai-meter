@@ -215,7 +215,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "histogram_quantile(0.95, sum by (le, team_id) (last_over_time(http_server_request_duration_seconds_bucket{http_route=\"api/chat\"}[$__range])))",
+          "expr": "histogram_quantile(0.95, sum by (le, team_id) (last_over_time(http_server_request_duration_seconds_bucket{http_route=\"api/chat\", team_id!=\"\"}[$__range])))",
           "legendFormat": "{{team_id}}"
         }
       ],
@@ -253,7 +253,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (team_id, token_type, gen_ai_request_model) (last_over_time(ai_meter_tokens_total[$__range]))",
+          "expr": "sum by (team_id, token_type, gen_ai_response_model) (last_over_time(ai_meter_tokens_total[$__range]))",
           "format": "table",
           "instant": true
         }
@@ -269,7 +269,7 @@
               "Value": "tokens",
               "team_id": "team",
               "token_type": "type",
-              "gen_ai_request_model": "model"
+              "gen_ai_response_model": "model"
             }
           }
         }

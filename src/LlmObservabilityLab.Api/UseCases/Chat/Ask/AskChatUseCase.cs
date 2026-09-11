@@ -24,6 +24,10 @@ public sealed class AskChatUseCase : IAskChatUseCase
     {
         Validate(request);
 
+        // The OpenTelemetry wrapper copies these onto the gen_ai span only when
+        // EnableSensitiveData is on, which ChatClientRegistration ties to Development.
+        // Team attribution outside Development comes from TeamContextMiddleware, which
+        // tags the request span and the HTTP metric, and from AiUsageMeter.
         ChatOptions options = new()
         {
             AdditionalProperties = new AdditionalPropertiesDictionary
