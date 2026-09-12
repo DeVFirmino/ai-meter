@@ -6,7 +6,7 @@ Read the accompanying blog post: [AI Meter: run a lab for LLM usage, estimated c
 
 ![Grafana showing simulated token usage and estimated cost for engineering and support, with three engineering calls blocked by the request limit](docs/img/ai-meter-grafana-demo.png)
 
-This earlier capture uses simulated data. Its totals differ from the repeatable demo below and represent no actual spending.
+The capture comes from the blog post's lab: `Teams__RequestsPerMinute=5`, eight `engineering` requests of which three were blocked, and `support` traffic spread over a few minutes. Its totals therefore differ from the two-request demo below. They are simulated and represent no actual spending.
 
 ## Run the lab
 
@@ -66,7 +66,7 @@ To connect Azure OpenAI, follow [the real-model setup](docs/lab-guide.md#connect
 
 ## Code conventions
 
-The API uses MVC controllers with dependencies injected into each action, and one use case per operation. The chat operation exposes `IAskChatUseCase.Ask`. Validation runs inside the use case and HTTP 400 errors share `ErrorResponse`.
+The API uses MVC controllers with dependencies injected into each action, and one use case per operation. The chat operation exposes `IAskChatUseCase.Execute`. Validation runs inside the use case and HTTP 400 errors share `ErrorResponse`.
 
 Keep explicit constructors, sealed concrete classes and namespaces matching folders. Tests use `Should...When...` names, FluentAssertions and Moq behind builders, in separate projects for use cases, validators and HTTP behaviour. The [convention details](docs/lab-guide.md#code-conventions) explain the boundaries.
 

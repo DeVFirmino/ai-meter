@@ -29,7 +29,7 @@ public sealed class AskChatUseCaseTests
             Prompt = prompt,
         };
 
-        AskChatResponse response = await useCase.Ask(request, teamId, cancellationToken);
+        AskChatResponse response = await useCase.Execute(request, teamId, cancellationToken);
 
         response.Text.Should().Be(assistantText);
         chatClientBuilder.VerifyReceivedPrompt(prompt, cancellationToken);
@@ -48,7 +48,7 @@ public sealed class AskChatUseCaseTests
             Prompt = string.Empty,
         };
 
-        Func<Task> act = () => useCase.Ask(request, "engineering", CancellationToken.None);
+        Func<Task> act = () => useCase.Execute(request, "engineering", CancellationToken.None);
 
         ValidationFailedException exception = (await act.Should()
             .ThrowAsync<ValidationFailedException>()).Which;
@@ -71,7 +71,7 @@ public sealed class AskChatUseCaseTests
             Prompt = "Explain observability.",
         };
 
-        await useCase.Ask(request, "support", CancellationToken.None);
+        await useCase.Execute(request, "support", CancellationToken.None);
 
         IReadOnlyList<CollectedMeasurement<long>> measurements = probe.Collector.GetMeasurementSnapshot();
         measurements.Should().HaveCount(2);
