@@ -22,7 +22,7 @@ public sealed class ChatController : ControllerBase
         [FromBody] AskChatRequest request,
         CancellationToken cancellationToken)
     {
-        AskChatResponse response = await useCase.Ask(request, teamContext.TeamId, cancellationToken);
+        AskChatResponse response = await useCase.Execute(request, teamContext.TeamId, cancellationToken);
 
         return Ok(response);
     }
