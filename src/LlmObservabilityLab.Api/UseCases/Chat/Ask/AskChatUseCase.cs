@@ -17,7 +17,7 @@ public sealed class AskChatUseCase : IAskChatUseCase
         _usageMeter = usageMeter;
     }
 
-    public async Task<AskChatResponse> Ask(
+    public async Task<AskChatResponse> Execute(
         AskChatRequest request,
         string teamId,
         CancellationToken cancellationToken)
