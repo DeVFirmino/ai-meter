@@ -114,7 +114,7 @@ The API is one executable project with folders for the responsibilities it alrea
 |---|---|
 | HTTP | MVC controllers, literal routes, explicit binding attributes and dependencies injected into each action with `[FromServices]`. Actions return `IActionResult` and declare response types. |
 | Operations | One folder per operation under `UseCases/<Area>/<Operation>`, containing the interface, use case, validator and request/response records. |
-| Use case methods | One public method with the operation's verb: `IAskChatUseCase.Ask`. This project explicitly overrides the house convention of `Execute`. |
+| Use case methods | One public method named `Execute`: `IAskChatUseCase.Execute`. The operation's name lives in the type, not the method. |
 | Async work | Required `CancellationToken` as the last parameter, passed to I/O. Other async methods use `Async`; controller actions, test names and framework signatures follow their own contracts. |
 | Validation | FluentValidation runs at the start of the use case. Request records use named properties with defaults; response records use `required` named properties. |
 | Errors | `ErrorResponse` contains an `errors` array and optional `correlationId`. MVC binding failures, team rejection and quota rejection use that shape. `ExceptionFilter` maps application exceptions and hides unexpected exception details. |
