@@ -1,6 +1,6 @@
 # AI Meter
 
-AI Meter is an ASP.NET Core lab for tracking LLM token usage, estimated cost, failures and latency per team with OpenTelemetry and Grafana. Each team has its own request limit.
+Send requests to the simulated model as different teams, then look at their token counts and estimated costs in Grafana. This ASP.NET Core lab uses OpenTelemetry and lets you see what happens when one team reaches its request limit.
 
 Read the accompanying blog post: [AI Meter: run a lab for LLM usage, estimated cost and team limits](https://danieldias.dev/en/blog/ai-meter-usage-and-cost-per-team).
 
